@@ -14,6 +14,7 @@ final class StatusBarController: NSObject, ObservableObject {
 
     private var statusItem: NSStatusItem?
     private var menu: NSMenu?
+    private var launchMenuItem: NSMenuItem?
     private var autostartItem: NSMenuItem?
     private let statusBar = NSStatusBar.system
 
@@ -55,6 +56,7 @@ final class StatusBarController: NSObject, ObservableObject {
             keyEquivalent: ""
         )
         launchItem.target = self
+        self.launchMenuItem = launchItem
         m.addItem(launchItem)
 
         let autostart = NSMenuItem(
@@ -137,6 +139,8 @@ final class StatusBarController: NSObject, ObservableObject {
 
     private func showMenu() {
         guard let menu = menu else { return }
+        // Когда Яндекс Музыка уже запущена (в т.ч. свёрнута в док) - показываем "Показать окно"
+        launchMenuItem?.title = YandexMusicService.isRunning ? "Показать окно" : "Запустить Яндекс Музыку"
         menu.popUp(positioning: nil, at: NSEvent.mouseLocation, in: nil)
     }
 

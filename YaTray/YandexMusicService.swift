@@ -65,13 +65,50 @@ enum YandexMusicService {
         NSWorkspace.shared.open(url, configuration: config)
     }
 
-    /// Показать окно приложения (активировать и вывести на передний план)
+    /// Показать окно приложения (активировать и вывести на передний план, в т.ч. развернуть из дока)
     static func showWindow() {
         guard let app = runningApplication else {
             launch()
             return
         }
-        app.activate(options: [])
+        // Для уже запущенного приложения open(url) часто восстанавливает окно из дока (как клик по иконке в доке)
+        if let url = appURL {
+            NSWorkspace.shared.open(url)
+        }
+        app.activate(options: [.activateIgnoringOtherApps])
+        runReopenAppleScript()
+        unminimizeWindowViaAppleScript()
+    }
+
+    /// Команда reopen — то же, что при клике по иконке приложения в доке (часто восстанавливает окно у Electron-приложений)
+    private static func runReopenAppleScript() {
+        guard let url = appURL else { return }
+        let pathEscaped = url.path.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        var error: NSDictionary?
+        NSAppleScript(source: "tell application (POSIX file \"\(pathEscaped)\") to reopen")?.executeAndReturnError(&error)
+    }
+
+    /// Снять минимизацию главного окна (работает, когда окно свёрнуто в док). Пробуем reopen уже выше; здесь — явно по окну.
+    private static func unminimizeWindowViaAppleScript() {
+        guard let url = appURL else { return }
+        let pathEscaped = url.path.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        // 1) Стандартный способ: set miniaturized of window 1 to false
+        var error: NSDictionary?
+        NSAppleScript(source: "tell application (POSIX file \"\(pathEscaped)\") to set miniaturized of window 1 to false")?.executeAndReturnError(&error)
+        if error == nil { return }
+        // 2) Через System Events снимаем AXMinimized у первого окна (нужны права «Универсальный доступ»)
+        let processName = runningApplication?.localizedName ?? "Yandex Music"
+        let escapedName = processName.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+        let script2 = """
+            tell application "System Events" to tell process "\(escapedName)"
+                set frontmost to true
+                if (count of windows) > 0 then
+                    set value of attribute "AXMinimized" of window 1 to false
+                end if
+            end tell
+            """
+        error = nil
+        NSAppleScript(source: script2)?.executeAndReturnError(&error)
     }
 
     /// Скрыть окно приложения (команда Hide)
