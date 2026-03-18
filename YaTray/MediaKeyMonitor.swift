@@ -87,13 +87,12 @@ final class MediaKeyMonitor {
 
         guard keyCode == Int(kPlayKeyCode), keyDown else { return false }
 
+        if YandexMusicService.isRunning {
+            // Уже запущена — не перехватываем, пусть клавиша уйдёт в приложение (плей/пауза в т.ч. в фоне)
+            return false
+        }
         DispatchQueue.main.async {
-            if YandexMusicService.isRunning {
-                // Уже запущена — выводим на передний план, чтобы не отдавать Play в iTunes
-                YandexMusicService.showWindow()
-            } else {
-                YandexMusicService.launch()
-            }
+            YandexMusicService.launch()
         }
         return true
     }
