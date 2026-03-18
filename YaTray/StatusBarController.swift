@@ -2,7 +2,7 @@
 //  StatusBarController.swift
 //  YaTray
 //
-//  Иконка в меню-баре (жёлтый кружок), клик - показать/скрыть окно, меню - пункты управления.
+//  Иконка в меню-баре (плей, в стиле системных иконок), клик - показать/скрыть окно, меню - пункты управления.
 //
 
 import AppKit
@@ -34,9 +34,9 @@ final class StatusBarController: NSObject, ObservableObject {
         statusItem = statusBar.statusItem(withLength: NSStatusItem.squareLength)
         guard let button = statusItem?.button else { return }
 
-        // Жёлтый кружок как иконка
-        button.image = makeYellowCircleImage()
-        button.image?.isTemplate = false
+        // Иконка плей в стиле системных иконок меню-бара
+        button.image = makePlayIconImage()
+        button.image?.isTemplate = true
         button.action = #selector(statusBarButtonClicked(_:))
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
         button.target = self
@@ -86,14 +86,29 @@ final class StatusBarController: NSObject, ObservableObject {
         self.menu = m
     }
 
-    private func makeYellowCircleImage() -> NSImage {
+    /// Иконка плей (шаблонная - цвет задаёт система, как у стандартных иконок меню-бара).
+    private func makePlayIconImage() -> NSImage {
+        if let sysImage = NSImage(systemSymbolName: "play.fill", accessibilityDescription: "Play") {
+            let size: CGFloat = 18
+            let config = NSImage.SymbolConfiguration(pointSize: size - 4, weight: .medium)
+            let scaled = sysImage.withSymbolConfiguration(config) ?? sysImage
+            scaled.isTemplate = true
+            return scaled
+        }
+        // Fallback: рисуем треугольник плей вручную (цвет для шаблона не важен, система подставит свой)
         let size = NSSize(width: 18, height: 18)
         let image = NSImage(size: size)
         image.lockFocus()
-        NSColor.systemYellow.setFill()
-        NSBezierPath(ovalIn: NSRect(origin: .zero, size: size)).fill()
+        NSColor.black.setFill()
+        let path = NSBezierPath()
+        let inset: CGFloat = 4
+        path.move(to: NSPoint(x: inset, y: inset))
+        path.line(to: NSPoint(x: inset, y: size.height - inset))
+        path.line(to: NSPoint(x: size.width - inset, y: size.height / 2))
+        path.close()
+        path.fill()
         image.unlockFocus()
-        image.isTemplate = false
+        image.isTemplate = true
         return image
     }
 
