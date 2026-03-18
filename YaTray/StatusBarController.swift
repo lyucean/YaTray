@@ -69,6 +69,16 @@ final class StatusBarController: NSObject, ObservableObject {
 
         m.addItem(NSMenuItem.separator())
 
+        let projectPageItem = NSMenuItem(
+            title: "Страница проекта",
+            action: #selector(menuOpenProjectPage),
+            keyEquivalent: ""
+        )
+        projectPageItem.target = self
+        m.addItem(projectPageItem)
+
+        m.addItem(NSMenuItem.separator())
+
         let quitItem = NSMenuItem(title: "Выйти", action: #selector(menuQuit), keyEquivalent: "q")
         quitItem.target = self
         m.addItem(quitItem)
@@ -108,6 +118,11 @@ final class StatusBarController: NSObject, ObservableObject {
 
     @objc private func menuToggleAutostart() {
         isAutostartEnabled.toggle()
+    }
+
+    @objc private func menuOpenProjectPage() {
+        guard let url = URL(string: "https://github.com/lyucean/YaTray") else { return }
+        NSWorkspace.shared.open(url)
     }
 
     @objc private func menuQuit() {
