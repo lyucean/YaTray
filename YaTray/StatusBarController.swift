@@ -77,6 +77,14 @@ final class StatusBarController: NSObject, ObservableObject {
         projectPageItem.target = self
         m.addItem(projectPageItem)
 
+        let versionItem = NSMenuItem(
+            title: "Версия \(Self.appVersionString)",
+            action: nil,
+            keyEquivalent: ""
+        )
+        versionItem.isEnabled = false
+        m.addItem(versionItem)
+
         m.addItem(NSMenuItem.separator())
 
         let quitItem = NSMenuItem(title: "Выйти", action: #selector(menuQuit), keyEquivalent: "q")
@@ -84,6 +92,11 @@ final class StatusBarController: NSObject, ObservableObject {
         m.addItem(quitItem)
 
         self.menu = m
+    }
+
+    /// Версия приложения (год.месяц.день.часминута из сборки или из Info.plist).
+    private static var appVersionString: String {
+        YaTrayVersion.string
     }
 
     /// Иконка плей (шаблонная - цвет задаёт система, как у стандартных иконок меню-бара).
