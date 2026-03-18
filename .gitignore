@@ -1,5 +1,6 @@
 # Сборка
 build/
+release/
 DerivedData/
 *.xcworkspace/xcuserdata/
 
@@ -29,6 +30,9 @@ Packages/
 .AppleDouble
 .LSOverride
 ._*
+
+# Релиз (токен не коммитить)
+.env
 
 # Логи и отладка
 *.log
