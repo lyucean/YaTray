@@ -1,5 +1,5 @@
 #!/bin/bash
-# Полный релиз: сборка, архив (только .app), тег, GitHub Release.
+# Полный релиз: сборка, DMG-установщик, тег, GitHub Release.
 # Версия = годмесяцденьчас (YYYYMMDDHH). Загружает GITHUB_TOKEN из .env.
 
 set -e
@@ -21,9 +21,9 @@ fi
 # Версия = годмесяцденьчас
 VERSION=$(date +%Y%m%d%H)
 TAG="v${VERSION}"
-ZIP="YaTray-macOS-${VERSION}.zip"
+DMG_NAME="YaTray-macOS-${VERSION}.dmg"
 RELEASE_DIR="$ROOT/release"
-ARCHIVE="$RELEASE_DIR/$ZIP"
+ARCHIVE="$RELEASE_DIR/$DMG_NAME"
 APP_BUNDLE="build/Build/Products/Release/YaTray.app"
 
 echo "Версия: $VERSION (тег $TAG)"
@@ -32,14 +32,9 @@ echo "Версия: $VERSION (тег $TAG)"
 echo "Сборка Release..."
 xcodebuild -project YaTray.xcodeproj -scheme YaTray -configuration Release -derivedDataPath build clean build -quiet
 
-# 2. Упаковать только .app
-echo "Упаковка $ZIP..."
-rm -rf "$RELEASE_DIR/YaTray.app" "$RELEASE_DIR/YaTray-macOS-"*.zip
-mkdir -p "$RELEASE_DIR"
-cp -R "$ROOT/$APP_BUNDLE" "$RELEASE_DIR/"
-cd "$RELEASE_DIR"
-zip -rq "$ZIP" YaTray.app
-cd "$ROOT"
+# 2. Создание DMG (перетащи в Applications)
+echo "Создание DMG $DMG_NAME..."
+./scripts/create-dmg.sh "$VERSION"
 
 # 3. Тег и пуш (если тег уже есть - только загружаем в существующий релиз)
 TAG_EXISTS=0
@@ -52,7 +47,7 @@ else
   git push origin "$TAG"
 fi
 
-# 4. Релиз на GitHub: создать или получить по тегу, прикрепить zip
+# 4. Релиз на GitHub: создать или получить по тегу, прикрепить DMG
 RELEASE_ID=""
 if [ "$TAG_EXISTS" = "1" ]; then
   echo "Получение релиза по тегу..."
@@ -70,7 +65,7 @@ if [ "$TAG_EXISTS" = "1" ]; then
       -d "{
         \"tag_name\": \"${TAG}\",
         \"name\": \"Release ${VERSION}\",
-        \"body\": \"Скачайте **${ZIP}** (в Assets). В архиве один файл - YaTray.app. Перетащите в «Программы». Не скачивайте Source code - там исходники.\"
+        \"body\": \"Скачайте **${DMG_NAME}** (в Assets). Откройте образ и перетащите YaTray.app в папку «Программы». Не скачивайте Source code - там исходники.\"
       }")
     HTTP_CODE=$(echo "$RELEASE_RESP" | tail -1)
     BODY=$(echo "$RELEASE_RESP" | sed '$d')
@@ -89,7 +84,7 @@ else
     -d "{
       \"tag_name\": \"${TAG}\",
       \"name\": \"Release ${VERSION}\",
-      \"body\": \"Скачайте **${ZIP}** (в Assets). В архиве один файл - YaTray.app. Перетащите в «Программы». Не скачивайте Source code - там исходники.\"
+      \"body\": \"Скачайте **${DMG_NAME}** (в Assets). Откройте образ и перетащите YaTray.app в папку «Программы». Не скачивайте Source code - там исходники.\"
     }")
   HTTP_CODE=$(echo "$RELEASE_RESP" | tail -1)
   BODY=$(echo "$RELEASE_RESP" | sed '$d')
@@ -100,11 +95,11 @@ else
   fi
 fi
 
-UPLOAD_URL="https://uploads.github.com/repos/${REPO}/releases/${RELEASE_ID}/assets?name=${ZIP}"
-echo "Загрузка $ZIP..."
+UPLOAD_URL="https://uploads.github.com/repos/${REPO}/releases/${RELEASE_ID}/assets?name=${DMG_NAME}"
+echo "Загрузка $DMG_NAME..."
 UPLOAD_RESP=$(curl -s -w "\n%{http_code}" -X POST \
   -H "Authorization: token $GITHUB_TOKEN" \
-  -H "Content-Type: application/zip" \
+  -H "Content-Type: application/octet-stream" \
   --data-binary "@${ARCHIVE}" \
   "$UPLOAD_URL")
 HTTP_CODE=$(echo "$UPLOAD_RESP" | tail -1)
@@ -112,7 +107,7 @@ BODY=$(echo "$UPLOAD_RESP" | sed '$d')
 if [ "$HTTP_CODE" = "201" ]; then
   echo "Ассет загружен."
 elif [ "$HTTP_CODE" = "422" ] && echo "$BODY" | grep -q '"code":"already_exists"'; then
-  echo "Ассет $ZIP уже есть в релизе, пропускаем загрузку."
+  echo "Ассет $DMG_NAME уже есть в релизе, пропускаем загрузку."
 else
   echo "Ошибка загрузки (HTTP $HTTP_CODE): $BODY"
   exit 1

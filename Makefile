@@ -6,7 +6,7 @@ BUILD_DIR = build
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build clean run zip install release
+.PHONY: help build clean run zip dmg install release
 
 help:
 	@echo "YaTray - доступные команды:"
@@ -17,14 +17,19 @@ help:
 	@echo "  make run      - собрать и запустить приложение"
 	@echo "  make install  - собрать и установить в /Applications"
 	@echo "  make zip      - упаковать текущую сборку в zip (release/)"
-	@echo "  make release - полный релиз: сборка, zip, тег, GitHub Release"
+	@echo "  make dmg      - собрать и создать DMG-установщик (release/)"
+	@echo "  make release  - полный релиз: сборка, DMG, тег, GitHub Release"
 	@echo ""
 	@echo "Переменные: CONFIG=Debug|Release (по умолчанию Release)"
 	@echo "Релиз: GITHUB_TOKEN в .env (см. scripts/do-release.sh)"
 
-# Полный релиз: сборка, zip, тег годмесяцденьчас, пуш тега, GitHub Release
+# Полный релиз: сборка, DMG, тег годмесяцденьчас, пуш тега, GitHub Release
 release:
 	@./scripts/do-release.sh
+
+# Собрать и создать DMG с окном «перетащи в Applications»
+dmg: build
+	@./scripts/create-dmg.sh
 
 # Только сборка Release
 build:
