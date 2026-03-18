@@ -37,33 +37,31 @@ enum YandexMusicService {
         }
     }
 
-    /// Переменные окружения от Xcode/Debug, которые нельзя передавать запускаемому приложению
-    private static let envKeysToStrip = [
-        "DYLD_INSERT_LIBRARIES", "DYLD_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH",
-        "__XCODE_BUILT_PRODUCTS_DIR_PATHS", "XCODE_PRODUCT_BUILD_VERSION",
-        "IDEPackageSupport", "XPC_SERVICE_NAME", "__CF_USER_TEXT_ENCODING"
-    ]
+    /// Минимальное безопасное окружение для запуска приложения (без переменных Xcode/Debug),
+    /// чтобы не передавать __preview.dylib и не вызывать краш при запуске из Xcode.
+    private static func cleanLaunchEnvironment() -> [String: String] {
+        let current = ProcessInfo.processInfo.environment
+        let safeKeys = ["HOME", "USER", "LOGNAME", "PATH", "SHELL", "TMPDIR", "LANG", "LC_ALL", "__CF_USER_TEXT_ENCODING"]
+        var env: [String: String] = [:]
+        for key in safeKeys {
+            if let value = current[key], !value.contains("DerivedData"), !value.contains("__preview") {
+                env[key] = value
+            }
+        }
+        if env["PATH"] == nil { env["PATH"] = "/usr/bin:/bin:/usr/sbin:/sbin" }
+        if env["HOME"] == nil { env["HOME"] = NSHomeDirectory() }
+        return env
+    }
 
-    /// Запустить приложение (если ещё не запущено). Окружение очищается от переменных Xcode,
-    /// чтобы не передавать в Яндекс Музыку __preview.dylib и не вызывать краш.
+    /// Запустить приложение (если ещё не запущено).
     static func launch() {
         guard let url = appURL else { return }
         guard !isRunning else {
             showWindow()
             return
         }
-        var env = ProcessInfo.processInfo.environment
-        for key in envKeysToStrip {
-            env.removeValue(forKey: key)
-        }
-        // Убираем любые DYLD_* и пути в DerivedData
-        env = env.filter { name, value in
-            if name.hasPrefix("DYLD_") { return false }
-            if value.contains("DerivedData") || value.contains("__preview") { return false }
-            return true
-        }
         var config = NSWorkspace.OpenConfiguration()
-        config.environment = env
+        config.environment = cleanLaunchEnvironment()
         NSWorkspace.shared.open(url, configuration: config)
     }
 
