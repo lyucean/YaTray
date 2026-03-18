@@ -86,14 +86,14 @@ final class MediaKeyMonitor {
         let keyDown = ((keyFlags & 0xFF00) >> 8) == 0x0A
 
         guard keyCode == Int(kPlayKeyCode), keyDown else { return false }
-        guard !YandexMusicService.isRunning else {
-            log.debug("Play нажат, но Яндекс Музыка уже запущена - не перехватываем")
-            return false
-        }
 
-        log.info("Перехват Play: запускаем Яндекс Музыку, съедаем событие")
         DispatchQueue.main.async {
-            YandexMusicService.launch()
+            if YandexMusicService.isRunning {
+                // Уже запущена — выводим на передний план, чтобы не отдавать Play в iTunes
+                YandexMusicService.showWindow()
+            } else {
+                YandexMusicService.launch()
+            }
         }
         return true
     }
